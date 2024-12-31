@@ -1,7 +1,6 @@
 # todo
 # add song select
 # add home screen with buttons
-# add downscroll (I can't play upscroll lol))
 import pygame 
 
 
@@ -12,7 +11,7 @@ pygame.init()
 # displaying a window of height 
 # default resulotion
 default_x=600
-default_y=1000 
+default_y=800
 
 window = pygame.display.set_mode((default_x, default_y),pygame.RESIZABLE) 
   
@@ -25,6 +24,7 @@ clock = pygame.time.Clock()
 # keep game running till running is true 
 start = False
 create_map = False
+scroll_direction = "down"
 
 key_channel = [
     [[2609, "n"], [3178, "n"], [3540, ["ln", 4359]]]
@@ -104,8 +104,12 @@ def display_game_elements():
     global accarcy_text, combo_text
     clock.tick(120)
     window.fill((255, 255, 255))
-    pygame.draw.rect(window, (0, 0, 255), 
-            [100, 0, 400, 90], 1)
+    if scroll_direction == "up":
+        pygame.draw.rect(window, (0, 0, 255), 
+        [100, 0, 400, 90], 1)
+    elif scroll_direction == "down":
+        pygame.draw.rect(window, (0, 0, 255), 
+        [100, default_y - 90, 400, default_y], 1)
     hit_judgement = hit_judgement_text.get_rect()
     hit_judgement.center = (default_x // 2, default_y // 2)
     accarcy_display = accarcy_text.get_rect()
@@ -118,7 +122,7 @@ def display_game_elements():
     frame_counter_display.center = (default_x - 50, default_y - 50)
     window.blit(frame_counter_text, frame_counter_display)
     if total_hits != 0:
-        accarcy_text = font.render(str(round(score/(total_hits*3) * 10000)/100)+"%", True, (0,255,0) )
+        accarcy_text = font.render(str(round(score/((total_hits + hit_releases)*3) * 10000)/100)+"%", True, (0,255,0) )
         combo_text = font.render(str(combo) + "x", True, (0,255,0) )
         window.blit(accarcy_text, accarcy_display)
         window.blit(combo_text,combo_display)
@@ -134,11 +138,14 @@ def check_key_channel_hit(event):
                 continue
 
             time_elapsed = pygame.time.get_ticks() - start_time
+            time_desired = key_channel[channel][key_inx[channel]][0]
+            note_type = key_channel[channel][key_inx[channel]][1]
 
-            type_of_hit = determine_hit_judgement(channel, key_channel[channel][key_inx[channel]][0], key_channel[channel][key_inx[channel]][1])
+            print(time_elapsed - time_desired)
+
+            type_of_hit = determine_hit_judgement(channel, time_desired, note_type)
 
             print("hit key 1 and type of hit " + type_of_hit)
-            print(time_elapsed - key_channel[channel][key_inx[channel]][0])
             if type_of_hit != "not hit or miss":
                 key_inx[channel] += 1
                 total_hits += 1
@@ -211,21 +218,41 @@ while running:
         #game logic
         time_elapsed = pygame.time.get_ticks() - start_time
 
-        for i in channel_to_key.keys():
-            for j in range(key_inx[i], len(key_channel[i])):
-                note_distance = (key_channel[i][j][0] - time_elapsed) / 2 # time_until_note * scroll_distance_per_unit
-                note_type = key_channel[i][j][1]
-                if note_distance <= 1090:
-                    # note_type is a list when its a long note
-                    if isinstance(note_type, list):
-                        note_length = (note_type[1] - key_channel[i][j][0]) / 2
-                        pygame.draw.rect(window, (0, 0, 255), 
-                            [100*(i + 1), note_distance, 90, note_length], 0)
+        if scroll_direction == "up":
+
+            for i in channel_to_key.keys():
+                for j in range(key_inx[i], len(key_channel[i])):
+                    note_distance = (key_channel[i][j][0] - time_elapsed) / 2 # time_until_note * scroll_distance_per_unit
+                    note_type = key_channel[i][j][1]
+                    if note_distance <= 1090:
+                        # note_type is a list when its a long note
+                        if isinstance(note_type, list):
+                            note_length = (note_type[1] - key_channel[i][j][0]) / 2
+                            pygame.draw.rect(window, (0, 0, 255), 
+                                [100*(i + 1), note_distance, 90, note_length], 0)
+                        else:
+                            pygame.draw.rect(window, (0, 0, 255), 
+                                [100*(i + 1), note_distance, 90, 90], 0)
                     else:
-                        pygame.draw.rect(window, (0, 0, 255), 
-                            [100*(i + 1), note_distance, 90, 90], 0)
-                else:
-                    break
+                        break
+
+        elif scroll_direction == "down":
+
+            for i in channel_to_key.keys():
+                for j in range(key_inx[i], len(key_channel[i])):
+                    note_distance = (key_channel[i][j][0] - time_elapsed) / 2 # time_until_note * scroll_distance_per_unit
+                    note_type = key_channel[i][j][1]
+                    if note_distance <= 1090:
+                        # note_type is a list when its a long note
+                        if isinstance(note_type, list):
+                            note_length = (note_type[1] - key_channel[i][j][0]) / 2
+                            pygame.draw.rect(window, (0, 0, 255), 
+                                [100*(i + 1), default_y - note_distance - note_length, 90, note_length], 0)
+                        else:
+                            pygame.draw.rect(window, (0, 0, 255), 
+                                [100*(i + 1), default_y - note_distance - 90, 90, 90], 0)
+                    else:
+                        break
 
         for i in channel_to_key.keys():
             if len(key_channel[i]) > key_inx[i]:
